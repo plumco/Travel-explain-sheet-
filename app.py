@@ -11,8 +11,7 @@ from openpyxl import load_workbook
 APP_TITLE = "Huliot Travel Expense Entry"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATE_FILE = os.path.join(BASE_DIR, "Travelling Expenses Sheet.xlsx")
-LOCAL_FILE = os.path.join(BASE_DIR, "local_travel_entries.csv")
-DATA_SHEET_NAME = "Travel_Expense_Entries"
+DATA_SHEET_NAME = "Entries"
 TEMPLATE_SHEET_NAME = "Travel Reimbur. Form"
 
 COLUMNS = [
@@ -193,7 +192,8 @@ def get_google_worksheet():
             ws.clear()
             ws.update("A1", [COLUMNS])
         return ws
-    except Exception:
+    except Exception as e:
+        st.session_state["gsheet_error"] = str(e)
         return None
 
 
@@ -204,8 +204,6 @@ def read_entries() -> pd.DataFrame:
             df = pd.DataFrame(ws.get_all_records())
         except Exception:
             df = pd.DataFrame(columns=COLUMNS)
-    elif os.path.exists(LOCAL_FILE):
-        df = pd.read_csv(LOCAL_FILE)
     else:
         df = pd.DataFrame(columns=COLUMNS)
 
@@ -221,9 +219,7 @@ def save_entry(row: dict):
     if ws is not None:
         ws.append_row([row[col] for col in COLUMNS], value_input_option="USER_ENTERED")
     else:
-        df = read_entries()
-        df = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
-        df.to_csv(LOCAL_FILE, index=False)
+        raise RuntimeError("Google Sheets not connected. " + st.session_state.get("gsheet_error", "Check Streamlit Secrets and Google Sheet sharing."))
 
 
 def rewrite_entries(df: pd.DataFrame):
@@ -237,7 +233,7 @@ def rewrite_entries(df: pd.DataFrame):
         ws.clear()
         ws.update("A1", [COLUMNS] + df.astype(str).values.tolist())
     else:
-        df.to_csv(LOCAL_FILE, index=False)
+        raise RuntimeError("Google Sheets not connected. " + st.session_state.get("gsheet_error", "Check Streamlit Secrets and Google Sheet sharing."))
 
 
 def update_entry_by_id(entry_id: str, updated_row: dict):
@@ -418,7 +414,8 @@ def main():
             if not make_str(from_loc) or not make_str(to_loc):
                 st.error("Please enter From and To.")
             else:
-                save_entry({
+                try:
+                    save_entry({
                     "Timestamp": current_stamp(),
                     "EntryID": str(uuid.uuid4())[:8],
                     "Name": make_str(name),
@@ -440,8 +437,12 @@ def main():
                     "CourierStationary": courier,
                     "RikshawBusOla": rikshaw,
                     "Remarks": make_str(remarks),
-                })
-                st.success("Entry saved successfully.")
+                    })
+                    st.success("Entry saved to Google Sheet successfully.")
+                    st.rerun()
+                except Exception as e:
+                    st.error("Entry not saved. Google Sheet error:")
+                    st.code(str(e))
 
     df = read_entries()
     filtered = df.copy()
@@ -494,7 +495,9 @@ def main():
     if get_google_worksheet() is not None:
         st.markdown('<p class="ok-text">Storage: Google Sheets connected. Entries are saved live.</p>', unsafe_allow_html=True)
     else:
-        st.markdown('<p class="warn-text">Storage: Google Sheets not connected. Local CSV fallback is active for testing.</p>', unsafe_allow_html=True)
+        st.markdown('<p class="warn-text">Storage: Google Sheets not connected. No local CSV fallback is used.</p>', unsafe_allow_html=True)
+        if st.session_state.get("gsheet_error"):
+            st.code(st.session_state.get("gsheet_error"))
     st.markdown('<p class="muted">Excel download uses your original workbook. Only employee details and entry cells are filled.</p></div>', unsafe_allow_html=True)
 
     st.markdown('<div class="card-box"><h2 class="card-title">Saved Entries</h2>', unsafe_allow_html=True)
