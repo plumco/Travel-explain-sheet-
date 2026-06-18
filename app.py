@@ -771,7 +771,9 @@ def main():
     if filtered.empty:
         st.info("No entry available to edit.")
     else:
-        edit_options = []
+        # 1. Add the "N/A" default option at the very beginning of the list
+        edit_options = [("--- Select an entry to edit ---", "")] 
+        
         for _, r in filtered.iterrows():
             label = f"{r.get('date', '')} | {r.get('from', '')} to {r.get('to', '')} | {r.get('company', '')} | ID: {r.get('id', '')}"
             edit_options.append((label, str(r.get("id", ""))))
@@ -779,92 +781,96 @@ def main():
         selected_label = st.selectbox("Select entry to edit", [x[0] for x in edit_options])
         selected_id = dict(edit_options).get(selected_label, "")
 
-        selected_rows = filtered[filtered["id"].astype(str) == selected_id]
+        # 2. Only show the form IF a real entry is selected (not the blank default)
+        if selected_id == "":
+            st.info("👆 Please select an entry from the dropdown above to view, edit, or delete it.")
+        else:
+            selected_rows = filtered[filtered["id"].astype(str) == selected_id]
 
-        if not selected_rows.empty:
-            selected = selected_rows.iloc[0].to_dict()
+            if not selected_rows.empty:
+                selected = selected_rows.iloc[0].to_dict()
 
-            with st.form("edit_form"):
-                e1, e2, e3, e4 = st.columns(4)
+                with st.form("edit_form"):
+                    e1, e2, e3, e4 = st.columns(4)
 
-                edit_date = e1.date_input("Date", value=parse_entry_date(selected.get("date")), key=f"edit_date_{selected_id}")
-                edit_from = e2.text_input("From", value=make_str(selected.get("from")), key=f"edit_from_{selected_id}")
-                edit_to = e3.text_input("To", value=make_str(selected.get("to")), key=f"edit_to_{selected_id}")
+                    edit_date = e1.date_input("Date", value=parse_entry_date(selected.get("date")), key=f"edit_date_{selected_id}")
+                    edit_from = e2.text_input("From", value=make_str(selected.get("from")), key=f"edit_from_{selected_id}")
+                    edit_to = e3.text_input("To", value=make_str(selected.get("to")), key=f"edit_to_{selected_id}")
 
-                current_vehicle = make_str(selected.get("vehicle"))
-                vehicle_index = VEHICLE_OPTIONS.index(current_vehicle) if current_vehicle in VEHICLE_OPTIONS else 0
-                edit_vehicle = e4.selectbox("2 Wheeler / 4 Wheeler", VEHICLE_OPTIONS, index=vehicle_index, key=f"edit_vehicle_{selected_id}")
+                    current_vehicle = make_str(selected.get("vehicle"))
+                    vehicle_index = VEHICLE_OPTIONS.index(current_vehicle) if current_vehicle in VEHICLE_OPTIONS else 0
+                    edit_vehicle = e4.selectbox("2 Wheeler / 4 Wheeler", VEHICLE_OPTIONS, index=vehicle_index, key=f"edit_vehicle_{selected_id}")
 
-                e5, e6 = st.columns(2)
-                edit_company = e5.text_input("Company Name / Contact / MEP Consultant", value=make_str(selected.get("company")), key=f"edit_company_{selected_id}")
-                edit_contact = e6.text_input("Contact Person / Meeting With", value=make_str(selected.get("contact")), key=f"edit_contact_{selected_id}")
+                    e5, e6 = st.columns(2)
+                    edit_company = e5.text_input("Company Name / Contact / MEP Consultant", value=make_str(selected.get("company")), key=f"edit_company_{selected_id}")
+                    edit_contact = e6.text_input("Contact Person / Meeting With", value=make_str(selected.get("contact")), key=f"edit_contact_{selected_id}")
 
-                e7, e8, e9, e10 = st.columns(4)
-                edit_invoice = e7.text_input("Invoice No.", value=make_str(selected.get("invoice")), key=f"edit_invoice_{selected_id}")
-                edit_toll = e8.number_input("Toll / Parking", min_value=0.0, value=money(selected.get("toll")), step=1.0, key=f"edit_toll_{selected_id}")
-                edit_fuel = e9.number_input("Petrol / Diesel", min_value=0.0, value=money(selected.get("fuel")), step=1.0, key=f"edit_fuel_{selected_id}")
-                edit_lodging = e10.number_input("Lodging / Boarding", min_value=0.0, value=money(selected.get("lodging")), step=1.0, key=f"edit_lodging_{selected_id}")
+                    e7, e8, e9, e10 = st.columns(4)
+                    edit_invoice = e7.text_input("Invoice No.", value=make_str(selected.get("invoice")), key=f"edit_invoice_{selected_id}")
+                    edit_toll = e8.number_input("Toll / Parking", min_value=0.0, value=money(selected.get("toll")), step=1.0, key=f"edit_toll_{selected_id}")
+                    edit_fuel = e9.number_input("Petrol / Diesel", min_value=0.0, value=money(selected.get("fuel")), step=1.0, key=f"edit_fuel_{selected_id}")
+                    edit_lodging = e10.number_input("Lodging / Boarding", min_value=0.0, value=money(selected.get("lodging")), step=1.0, key=f"edit_lodging_{selected_id}")
 
-                e11, e12, e13, e14 = st.columns(4)
-                edit_food = e11.number_input("Food / Beverages", min_value=0.0, value=money(selected.get("food")), step=1.0, key=f"edit_food_{selected_id}")
-                edit_tel = e12.number_input("Tel / Internet", min_value=0.0, value=money(selected.get("tel")), step=1.0, key=f"edit_tel_{selected_id}")
-                edit_courier = e13.number_input("Courier / Stationary", min_value=0.0, value=money(selected.get("courier")), step=1.0, key=f"edit_courier_{selected_id}")
-                edit_rikshaw = e14.number_input("Rikshaw / Bus / Ola", min_value=0.0, value=money(selected.get("rikshaw")), step=1.0, key=f"edit_rikshaw_{selected_id}")
+                    e11, e12, e13, e14 = st.columns(4)
+                    edit_food = e11.number_input("Food / Beverages", min_value=0.0, value=money(selected.get("food")), step=1.0, key=f"edit_food_{selected_id}")
+                    edit_tel = e12.number_input("Tel / Internet", min_value=0.0, value=money(selected.get("tel")), step=1.0, key=f"edit_tel_{selected_id}")
+                    edit_courier = e13.number_input("Courier / Stationary", min_value=0.0, value=money(selected.get("courier")), step=1.0, key=f"edit_courier_{selected_id}")
+                    edit_rikshaw = e14.number_input("Rikshaw / Bus / Ola", min_value=0.0, value=money(selected.get("rikshaw")), step=1.0, key=f"edit_rikshaw_{selected_id}")
 
-                edit_remarks = st.text_area("Remarks / Purpose", value=make_str(selected.get("remarks")), key=f"edit_remarks_{selected_id}")
+                    edit_remarks = st.text_area("Remarks / Purpose", value=make_str(selected.get("remarks")), key=f"edit_remarks_{selected_id}")
 
-                u1, u2 = st.columns(2)
+                    u1, u2 = st.columns(2)
 
-                update_clicked = u1.form_submit_button("Update Selected Entry")
-                delete_clicked = u2.form_submit_button("Delete Selected Entry")
+                    update_clicked = u1.form_submit_button("Update Selected Entry")
+                    delete_clicked = u2.form_submit_button("Delete Selected Entry")
 
-                if update_clicked:
-                    try:
-                        updated = {
-                            "id": selected_id,
-                            "empName": employee["empName"],
-                            "designation": employee["designation"],
-                            "location": employee["location"],
-                            "reportMonthText": employee["reportMonthText"],
-                            "date": edit_date.strftime("%Y-%m-%d"),
-                            "from": make_str(edit_from),
-                            "to": make_str(edit_to),
-                            "vehicle": make_str(edit_vehicle),
-                            "company": make_str(edit_company),
-                            "contact": make_str(edit_contact),
-                            "invoice": make_str(edit_invoice),
-                            "toll": edit_toll,
-                            "fuel": edit_fuel,
-                            "lodging": edit_lodging,
-                            "food": edit_food,
-                            "tel": edit_tel,
-                            "courier": edit_courier,
-                            "rikshaw": edit_rikshaw,
-                            "remarks": make_str(edit_remarks),
-                            "created_at": make_str(selected.get("created_at")) or current_stamp(),
-                        }
-                        updated["total"] = calc_total(updated)
+                    if update_clicked:
+                        try:
+                            updated = {
+                                "id": selected_id,
+                                "empName": employee["empName"],
+                                "designation": employee["designation"],
+                                "location": employee["location"],
+                                "reportMonthText": employee["reportMonthText"],
+                                "date": edit_date.strftime("%Y-%m-%d"),
+                                "from": make_str(edit_from),
+                                "to": make_str(edit_to),
+                                "vehicle": make_str(edit_vehicle),
+                                "company": make_str(edit_company),
+                                "contact": make_str(edit_contact),
+                                "invoice": make_str(edit_invoice),
+                                "toll": edit_toll,
+                                "fuel": edit_fuel,
+                                "lodging": edit_lodging,
+                                "food": edit_food,
+                                "tel": edit_tel,
+                                "courier": edit_courier,
+                                "rikshaw": edit_rikshaw,
+                                "remarks": make_str(edit_remarks),
+                                "created_at": make_str(selected.get("created_at")) or current_stamp(),
+                            }
+                            updated["total"] = calc_total(updated)
 
-                        if update_entry(selected_id, updated):
-                            st.success("Entry updated successfully.")
+                            if update_entry(selected_id, updated):
+                                st.success("Entry updated successfully.")
+                                st.rerun()
+                            else:
+                                st.error("Entry not found.")
+
+                        except Exception as e:
+                            st.error(f"Update failed: {e}")
+                            with st.expander("Show full error"):
+                                st.code(traceback.format_exc())
+
+                    if delete_clicked:
+                        try:
+                            delete_entry(selected_id)
+                            st.success("Entry deleted successfully.")
                             st.rerun()
-                        else:
-                            st.error("Entry not found.")
-
-                    except Exception as e:
-                        st.error(f"Update failed: {e}")
-                        with st.expander("Show full error"):
-                            st.code(traceback.format_exc())
-
-                if delete_clicked:
-                    try:
-                        delete_entry(selected_id)
-                        st.success("Entry deleted successfully.")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Delete failed: {e}")
-                        with st.expander("Show full error"):
-                            st.code(traceback.format_exc())
+                        except Exception as e:
+                            st.error(f"Delete failed: {e}")
+                            with st.expander("Show full error"):
+                                st.code(traceback.format_exc())
 
     st.markdown("</div>", unsafe_allow_html=True)
 
