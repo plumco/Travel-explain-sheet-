@@ -46,15 +46,6 @@ def default_employee():
         "reportMonthText": "01st Jun 2026 To 30th Jun 2026",
     }
 
-def parse_entry_date(value):
-    text = make_str(value)
-    for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y", "%m/%d/%Y"):
-        try:
-            return datetime.strptime(text, fmt).date()
-        except Exception:
-            pass
-    return date.today()
-
 def get_secret_value(name, default_value=""):
     try:
         return st.secrets.get(name, default_value)
@@ -150,21 +141,6 @@ def rewrite_entries(df):
     df = df[HEADERS].fillna("").astype(str)
     ws.clear()
     ws.update("A1", [HEADERS] + df.values.tolist())
-
-def update_entry(entry_id, updated_row):
-    df = read_entries()
-    mask = df["id"].astype(str) == str(entry_id)
-    if not mask.any():
-        return False
-    for col in HEADERS:
-        df.loc[mask, col] = updated_row.get(col, "")
-    rewrite_entries(df)
-    return True
-
-def delete_entry(entry_id):
-    df = read_entries()
-    new_df = df[df["id"].astype(str) != str(entry_id)].copy()
-    rewrite_entries(new_df)
 
 def copy_row_style(ws, source_row, target_row):
     for col in range(1, ws.max_column + 1):
@@ -430,114 +406,49 @@ def main():
     st.caption("Excel download uses your original workbook. Only employee details and entry cells are filled.")
     st.divider()
 
-    st.subheader("Saved Entries")
+    st.subheader("Saved Entries (Edit & Delete Directly)")
+    st.caption("📝 **To Edit:** Double-click any cell to change its value. <br> 🗑️ **To Delete:** Click the grey box on the far left of a row to select it, then press the **Delete / Trash** icon in the top right of the table.", unsafe_allow_html=True)
+
     if filtered.empty:
         st.info("No entries saved for this employee and period.")
     else:
-        display_cols = ["date", "from", "to", "company", "contact", "invoice", "vehicle", "toll", "fuel", "lodging", "food", "tel", "courier", "rikshaw", "total", "remarks", "id"]
-        show_df = filtered[[c for c in display_cols if c in filtered.columns]].copy()
-        show_df = show_df.rename(columns={
-            "date": "Date", "from": "From", "to": "To", "company": "Company / Consultant",
-            "contact": "Contact", "invoice": "Invoice", "vehicle": "Vehicle", "toll": "Toll",
-            "fuel": "Fuel", "lodging": "Lodging", "food": "Food", "tel": "Tel", "courier": "Courier",
-            "rikshaw": "Rikshaw", "total": "Total", "remarks": "Remarks", "id": "EntryID",
-        })
-        st.dataframe(show_df, use_container_width=True, hide_index=True, height=330)
+        # Display the interactive data editor
+        edited_df = st.data_editor(
+            filtered,
+            use_container_width=True,
+            hide_index=False,
+            num_rows="dynamic", # This allows row deletion
+            disabled=["id", "total", "created_at", "empName", "designation", "location", "reportMonthText"], # Lock background columns
+            column_order=["date", "from", "to", "company", "contact", "invoice", "vehicle", "toll", "fuel", "lodging", "food", "tel", "courier", "rikshaw", "total", "remarks"],
+            key="expense_editor"
+        )
 
-    st.divider()
-    st.subheader("Edit / Delete Entry")
-    if filtered.empty:
-        st.info("No entry available to edit.")
-    else:
-        edit_options = []
-        for _, r in filtered.iterrows():
-            label = f"{r.get('date', '')} | {r.get('from', '')} to {r.get('to', '')} | {r.get('company', '')} | ID: {r.get('id', '')}"
-            edit_options.append((label, str(r.get("id", ""))))
+        # Button to save the direct table edits to Google Sheets
+        if st.button("💾 Save Table Changes to Google Sheets", type="primary"):
+            try:
+                # Recalculate totals just in case the user edited the money columns
+                for idx, row in edited_df.iterrows():
+                    edited_df.at[idx, "total"] = calc_total(row)
 
-        selected_label = st.selectbox("Select entry to edit", [x[0] for x in edit_options])
-        selected_id = dict(edit_options).get(selected_label, "")
-        selected_rows = filtered[filtered["id"].astype(str) == selected_id]
+                # Fetch the main database
+                full_df = read_entries()
 
-        if not selected_rows.empty:
-            selected = selected_rows.iloc[0].to_dict()
-            with st.form("edit_form"):
-                e1, e2, e3, e4 = st.columns(4)
-                edit_date = e1.date_input("Date", value=parse_entry_date(selected.get("date")), key="edit_date")
-                edit_from = e2.text_input("From", value=make_str(selected.get("from")), key="edit_from")
-                edit_to = e3.text_input("To", value=make_str(selected.get("to")), key="edit_to")
+                # Remove the old versions of this employee's current month records
+                mask = (full_df["empName"] == employee["empName"]) & (full_df["reportMonthText"] == employee["reportMonthText"])
+                full_df = full_df[~mask]
 
-                current_vehicle = make_str(selected.get("vehicle"))
-                vehicle_index = VEHICLE_OPTIONS.index(current_vehicle) if current_vehicle in VEHICLE_OPTIONS else 0
-                edit_vehicle = e4.selectbox("2 Wheeler / 4 Wheeler", VEHICLE_OPTIONS, index=vehicle_index, key="edit_vehicle")
+                # Add the newly edited/deleted records back in
+                final_df = pd.concat([full_df, edited_df], ignore_index=True)
 
-                e5, e6 = st.columns(2)
-                edit_company = e5.text_input("Company Name / Contact / MEP Consultant", value=make_str(selected.get("company")), key="edit_company")
-                edit_contact = e6.text_input("Contact Person / Meeting With", value=make_str(selected.get("contact")), key="edit_contact")
+                # Overwrite Google Sheets with the updated data
+                rewrite_entries(final_df)
 
-                e7, e8, e9, e10 = st.columns(4)
-                edit_invoice = e7.text_input("Invoice No.", value=make_str(selected.get("invoice")), key="edit_invoice")
-                edit_toll = e8.number_input("Toll / Parking", min_value=0.0, value=money(selected.get("toll")), step=1.0, key="edit_toll")
-                edit_fuel = e9.number_input("Petrol / Diesel", min_value=0.0, value=money(selected.get("fuel")), step=1.0, key="edit_fuel")
-                edit_lodging = e10.number_input("Lodging / Boarding", min_value=0.0, value=money(selected.get("lodging")), step=1.0, key="edit_lodging")
-
-                e11, e12, e13, e14 = st.columns(4)
-                edit_food = e11.number_input("Food / Beverages", min_value=0.0, value=money(selected.get("food")), step=1.0, key="edit_food")
-                edit_tel = e12.number_input("Tel / Internet", min_value=0.0, value=money(selected.get("tel")), step=1.0, key="edit_tel")
-                edit_courier = e13.number_input("Courier / Stationary", min_value=0.0, value=money(selected.get("courier")), step=1.0, key="edit_courier")
-                edit_rikshaw = e14.number_input("Rikshaw / Bus / Ola", min_value=0.0, value=money(selected.get("rikshaw")), step=1.0, key="edit_rikshaw")
-
-                edit_remarks = st.text_area("Remarks / Purpose", value=make_str(selected.get("remarks")), key="edit_remarks")
-
-                u1, u2 = st.columns(2)
-                update_clicked = u1.form_submit_button("Update Selected Entry")
-                delete_clicked = u2.form_submit_button("Delete Selected Entry")
-
-                if update_clicked:
-                    try:
-                        updated = {
-                            "id": selected_id,
-                            "empName": employee["empName"],
-                            "designation": employee["designation"],
-                            "location": employee["location"],
-                            "reportMonthText": employee["reportMonthText"],
-                            "date": edit_date.strftime("%Y-%m-%d"),
-                            "from": make_str(edit_from),
-                            "to": make_str(edit_to),
-                            "vehicle": make_str(edit_vehicle),
-                            "company": make_str(edit_company),
-                            "contact": make_str(edit_contact),
-                            "invoice": make_str(edit_invoice),
-                            "toll": edit_toll,
-                            "fuel": edit_fuel,
-                            "lodging": edit_lodging,
-                            "food": edit_food,
-                            "tel": edit_tel,
-                            "courier": edit_courier,
-                            "rikshaw": edit_rikshaw,
-                            "remarks": make_str(edit_remarks),
-                            "created_at": make_str(selected.get("created_at")) or current_stamp(),
-                        }
-                        updated["total"] = calc_total(updated)
-
-                        if update_entry(selected_id, updated):
-                            st.success("Entry updated successfully.")
-                            st.rerun()
-                        else:
-                            st.error("Entry not found.")
-                    except Exception as e:
-                        st.error(f"Update failed: {e}")
-                        with st.expander("Show full error"):
-                            st.code(traceback.format_exc())
-
-                if delete_clicked:
-                    try:
-                        delete_entry(selected_id)
-                        st.success("Entry deleted successfully.")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Delete failed: {e}")
-                        with st.expander("Show full error"):
-                            st.code(traceback.format_exc())
+                st.success("All edits and deletions have been successfully synced to Google Sheets!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Failed to save changes: {e}")
+                with st.expander("Show full error"):
+                    st.code(traceback.format_exc())
 
 if __name__ == "__main__":
     main()
