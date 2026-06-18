@@ -9,243 +9,20 @@ import pandas as pd
 import streamlit as st
 from openpyxl import load_workbook
 
-
 APP_TITLE = "Huliot Travel Expense Entry"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATE_FILE = os.path.join(BASE_DIR, "Travelling Expenses Sheet.xlsx")
 TEMPLATE_SHEET_NAME = "Travel Reimbur. Form"
 WORKSHEET_NAME_DEFAULT = "Entries"
 
-VEHICLE_OPTIONS = [
-    "",
-    "2 Wheeler",
-    "4 Wheeler",
-    "Public Transport",
-    "Train",
-    "Bus",
-    "Flight",
-    "Other",
-]
-
-HEADERS = [
-    "id",
-    "empName",
-    "designation",
-    "location",
-    "reportMonthText",
-    "date",
-    "from",
-    "to",
-    "vehicle",
-    "company",
-    "contact",
-    "invoice",
-    "toll",
-    "fuel",
-    "lodging",
-    "food",
-    "tel",
-    "courier",
-    "rikshaw",
-    "remarks",
-    "total",
-    "created_at",
-]
-
+VEHICLE_OPTIONS = ["", "2 Wheeler", "4 Wheeler", "Public Transport", "Train", "Bus", "Flight", "Other"]
+HEADERS = ["id", "empName", "designation", "location", "reportMonthText", "date", "from", "to", "vehicle", "company", "contact", "invoice", "toll", "fuel", "lodging", "food", "tel", "courier", "rikshaw", "remarks", "total", "created_at"]
 AMOUNT_COLUMNS = ["toll", "fuel", "lodging", "food", "tel", "courier", "rikshaw"]
-
-CSS = """
-<style>
-    .stApp {
-        background: #f4f7fb;
-        color: #1f2937;
-        font-family: Arial, sans-serif;
-    }
-
-    .main .block-container {
-        max-width: 1180px;
-        padding-top: 0;
-        padding-bottom: 34px;
-    }
-
-    .html-header {
-        background: #1e40af;
-        color: white;
-        padding: 18px 16px;
-        text-align: center;
-        margin: 0 -2rem 18px -2rem;
-    }
-
-    .html-header .brand {
-        display: inline-block;
-        margin-bottom: 8px;
-        padding: 5px 10px;
-        border: 1px solid rgba(255,255,255,.55);
-        border-radius: 999px;
-        font-size: 12px;
-        letter-spacing: .3px;
-        background: rgba(255,255,255,.12);
-    }
-
-    .html-header h1 {
-        margin: 0;
-        font-size: 22px;
-        line-height: 1.1;
-        font-weight: 800;
-    }
-
-    .html-header p {
-        margin: 6px 0 0;
-        font-size: 14px;
-        opacity: .9;
-    }
-
-    .card-box {
-        background: white;
-        border-radius: 14px;
-        padding: 16px;
-        margin-bottom: 16px;
-        box-shadow: 0 4px 14px rgba(15, 23, 42, .08);
-        border: 0;
-    }
-
-    div[data-testid="stForm"] {
-        background: white;
-        border-radius: 14px;
-        padding: 16px;
-        margin-bottom: 16px;
-        box-shadow: 0 4px 14px rgba(15, 23, 42, .08);
-        border: 0;
-    }
-
-    .card-title {
-        margin: 0 0 14px 0;
-        font-size: 22px;
-        font-weight: 800;
-        color: #111827;
-    }
-
-    .muted {
-        color: #64748b;
-        font-size: 13px;
-        margin-top: 8px;
-    }
-
-    .ok-text {
-        color: #166534;
-        font-weight: 700;
-        font-size: 13px;
-    }
-
-    .warn-text {
-        color: #92400e;
-        font-weight: 700;
-        font-size: 13px;
-    }
-
-    .error-text {
-        color: #b91c1c;
-        font-weight: 700;
-        font-size: 13px;
-    }
-
-    label, [data-testid="stWidgetLabel"] p {
-        font-size: 12px !important;
-        font-weight: 700 !important;
-        color: #374151 !important;
-        margin-bottom: 5px !important;
-    }
-
-    input, textarea, select {
-        border: 1px solid #cbd5e1 !important;
-        border-radius: 8px !important;
-        font-size: 14px !important;
-        background: white !important;
-    }
-
-    textarea {
-        min-height: 70px !important;
-    }
-
-    div[data-baseweb="input"] > div,
-    div[data-baseweb="select"] > div,
-    div[data-baseweb="textarea"] > div {
-        border-radius: 8px !important;
-        border-color: #cbd5e1 !important;
-        background: white !important;
-    }
-
-    .stButton>button,
-    .stDownloadButton>button,
-    div[data-testid="stFormSubmitButton"] button {
-        border: 0;
-        border-radius: 8px;
-        padding: 10px 14px;
-        font-size: 14px;
-        font-weight: 800;
-        min-height: 42px;
-    }
-
-    div[data-testid="stFormSubmitButton"] button {
-        background: #2563eb;
-        color: white;
-    }
-
-    .stDownloadButton>button {
-        background: #16a34a;
-        color: white;
-    }
-
-    button[kind="secondary"] {
-        background: #e5e7eb;
-        color: #111827;
-    }
-
-    .summary-box {
-        background: #eff6ff;
-        border: 1px solid #bfdbfe;
-        border-radius: 12px;
-        padding: 12px;
-        text-align: center;
-        min-height: 74px;
-    }
-
-    .summary-box span {
-        display: block;
-        font-size: 12px;
-        color: #475569;
-    }
-
-    .summary-box strong {
-        display: block;
-        margin-top: 5px;
-        font-size: 18px;
-        color: #1e3a8a;
-    }
-
-    [data-testid="stDataFrame"] {
-        border-radius: 8px;
-        overflow: hidden;
-    }
-
-    .block-gap {
-        height: 8px;
-    }
-
-    @media (max-width: 800px) {
-        .html-header h1 {
-            font-size: 19px;
-        }
-    }
-</style>
-"""
-
 
 def make_str(value):
     if value is None:
         return ""
     return str(value).strip()
-
 
 def money(value):
     try:
@@ -255,14 +32,11 @@ def money(value):
     except Exception:
         return 0.0
 
-
 def current_stamp():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-
 def calc_total(row):
     return sum(money(row.get(col, 0)) for col in AMOUNT_COLUMNS)
-
 
 def default_employee():
     return {
@@ -271,7 +45,6 @@ def default_employee():
         "location": "Pune",
         "reportMonthText": "01st Jun 2026 To 30th Jun 2026",
     }
-
 
 def parse_entry_date(value):
     text = make_str(value)
@@ -282,20 +55,11 @@ def parse_entry_date(value):
             pass
     return date.today()
 
-
-def summary_box(label, value):
-    st.markdown(
-        f'<div class="summary-box"><span>{label}</span><strong>{value}</strong></div>',
-        unsafe_allow_html=True,
-    )
-
-
 def get_secret_value(name, default_value=""):
     try:
         return st.secrets.get(name, default_value)
     except Exception:
         return default_value
-
 
 @st.cache_resource(show_spinner=False)
 def get_google_worksheet():
@@ -354,71 +118,53 @@ def get_google_worksheet():
         st.session_state["gsheet_error"] = traceback.format_exc()
         return None
 
-
 def read_entries():
     ws = get_google_worksheet()
-
     if ws is None:
         return pd.DataFrame(columns=HEADERS)
-
     try:
         records = ws.get_all_records()
         df = pd.DataFrame(records)
     except Exception:
         df = pd.DataFrame(columns=HEADERS)
-
     for col in HEADERS:
         if col not in df.columns:
             df[col] = ""
-
     df = df[HEADERS].fillna("")
     return df
 
-
 def append_entry(row):
     ws = get_google_worksheet()
-
     if ws is None:
         raise RuntimeError("Google Sheets not connected.")
-
     row = {col: row.get(col, "") for col in HEADERS}
     ws.append_row([row[col] for col in HEADERS], value_input_option="USER_ENTERED")
 
-
 def rewrite_entries(df):
     ws = get_google_worksheet()
-
     if ws is None:
         raise RuntimeError("Google Sheets not connected.")
-
     for col in HEADERS:
         if col not in df.columns:
             df[col] = ""
-
     df = df[HEADERS].fillna("").astype(str)
     ws.clear()
     ws.update("A1", [HEADERS] + df.values.tolist())
 
-
 def update_entry(entry_id, updated_row):
     df = read_entries()
     mask = df["id"].astype(str) == str(entry_id)
-
     if not mask.any():
         return False
-
     for col in HEADERS:
         df.loc[mask, col] = updated_row.get(col, "")
-
     rewrite_entries(df)
     return True
-
 
 def delete_entry(entry_id):
     df = read_entries()
     new_df = df[df["id"].astype(str) != str(entry_id)].copy()
     rewrite_entries(new_df)
-
 
 def copy_row_style(ws, source_row, target_row):
     for col in range(1, ws.max_column + 1):
@@ -434,7 +180,6 @@ def copy_row_style(ws, source_row, target_row):
             tgt._style = copy(src._style)
     ws.row_dimensions[target_row].height = ws.row_dimensions[source_row].height
 
-
 def safe_set(ws, cell_ref, value):
     cell = ws[cell_ref]
     for merged_range in ws.merged_cells.ranges:
@@ -442,7 +187,6 @@ def safe_set(ws, cell_ref, value):
             ws.cell(merged_range.min_row, merged_range.min_col).value = value
             return
     cell.value = value
-
 
 def clear_cell(ws, row, col):
     coord = ws.cell(row, col).coordinate
@@ -452,7 +196,6 @@ def clear_cell(ws, row, col):
                 ws.cell(row, col).value = None
             return
     ws.cell(row, col).value = None
-
 
 def generate_excel(df, employee):
     wb = load_workbook(TEMPLATE_FILE)
@@ -467,7 +210,6 @@ def generate_excel(df, employee):
 
     if employee.get("empName"):
         filtered = filtered[filtered["empName"].astype(str) == employee.get("empName")]
-
     if employee.get("reportMonthText"):
         filtered = filtered[filtered["reportMonthText"].astype(str) == employee.get("reportMonthText")]
 
@@ -518,50 +260,35 @@ def generate_excel(df, employee):
     output.seek(0)
     return output.getvalue()
 
-
 def show_connection_status():
-    st.markdown('<div class="card-box"><h2 class="card-title">Google Sheet Connection</h2>', unsafe_allow_html=True)
-
+    st.subheader("Google Sheet Connection")
     ws = get_google_worksheet()
 
     if ws is not None:
-        st.markdown('<p class="ok-text">Storage: Google Sheets connected. Entries are saved live.</p>', unsafe_allow_html=True)
+        st.success("Storage: Google Sheets connected. Entries are saved live.")
     else:
-        st.markdown('<p class="error-text">Storage: Google Sheets not connected.</p>', unsafe_allow_html=True)
+        st.error("Storage: Google Sheets not connected.")
         with st.expander("Show Google Sheet connection error"):
             st.code(st.session_state.get("gsheet_error", "No error captured."))
 
-    sheet_id = ""
-    if "gsheets" in st.secrets:
-        sheet_id = st.secrets["gsheets"].get("spreadsheet_id", "")
-
-    worksheet_name = get_secret_value("WORKSHEET_NAME", WORKSHEET_NAME_DEFAULT)
+    sheet_id = get_secret_value("gsheets", {}).get("spreadsheet_id", "")
+    worksheet_name = get_secret_value("WORKSHEET_NAME", WORKSHEET_NAME_DEFAULT) or WORKSHEET_NAME_DEFAULT
     st.caption(f"Sheet ID: {sheet_id} | Worksheet: {worksheet_name}")
-    st.markdown("</div>", unsafe_allow_html=True)
-
 
 def main():
     st.set_page_config(page_title=APP_TITLE, layout="wide")
-    st.markdown(CSS, unsafe_allow_html=True)
 
-    st.markdown(
-        """
-        <div class="html-header">
-            <div class="brand">HULIOT INDIA</div>
-            <h1>Travel Expense Entry App</h1>
-            <p>Save entries live in Google Sheets and download in your original Excel format.</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.title("HULIOT INDIA")
+    st.header("Travel Expense Entry App")
+    st.caption("Save entries live in Google Sheets and download in your original Excel format.")
 
     if "employee" not in st.session_state:
         st.session_state.employee = default_employee()
 
     show_connection_status()
+    st.divider()
 
-    st.markdown('<div class="card-box"><h2 class="card-title">Employee Details</h2>', unsafe_allow_html=True)
-
+    st.subheader("Employee Details")
     ec1, ec2, ec3, ec4 = st.columns(4)
 
     emp_name = ec1.text_input("Name", value=st.session_state.employee.get("empName", ""), key="emp_name")
@@ -569,7 +296,7 @@ def main():
     location = ec3.text_input("Location", value=st.session_state.employee.get("location", ""), key="emp_location")
     report_text = ec4.text_input("Month / Period Text", value=st.session_state.employee.get("reportMonthText", ""), key="emp_report_text")
 
-    st.markdown('<p class="muted">These details are used in the Excel header and for filtering your saved entries.</p></div>', unsafe_allow_html=True)
+    st.caption("These details are used in the Excel header and for filtering your saved entries.")
 
     employee = {
         "empName": make_str(emp_name),
@@ -578,9 +305,10 @@ def main():
         "reportMonthText": make_str(report_text),
     }
     st.session_state.employee = employee
+    st.divider()
 
     with st.form("entry_form", clear_on_submit=True):
-        st.markdown('<h2 class="card-title">Add Travel Expense</h2>', unsafe_allow_html=True)
+        st.subheader("Add Travel Expense")
 
         c1, c2, c3, c4 = st.columns(4)
         entry_date = c1.date_input("Date", value=date.today())
@@ -637,23 +365,19 @@ def main():
                         "created_at": current_stamp(),
                     }
                     row["total"] = calc_total(row)
-
                     append_entry(row)
                     st.success("Entry saved successfully in Google Sheet.")
                     st.rerun()
-
             except Exception as e:
                 st.error(f"Entry not saved. Google Sheet error: {e}")
                 with st.expander("Show full error"):
                     st.code(traceback.format_exc())
 
     df = read_entries()
-
     filtered = df.copy()
 
     if employee["empName"]:
         filtered = filtered[filtered["empName"].astype(str) == employee["empName"]]
-
     if employee["reportMonthText"]:
         filtered = filtered[filtered["reportMonthText"].astype(str) == employee["reportMonthText"]]
 
@@ -664,35 +388,24 @@ def main():
     total_entries = len(filtered)
     sum_toll = filtered["toll"].apply(money).sum() if total_entries else 0
     sum_fuel = filtered["fuel"].apply(money).sum() if total_entries else 0
-    sum_stay_food = (
-        filtered["lodging"].apply(money).sum() + filtered["food"].apply(money).sum()
-    ) if total_entries else 0
+    sum_stay_food = (filtered["lodging"].apply(money).sum() + filtered["food"].apply(money).sum()) if total_entries else 0
     grand_total = filtered["total"].apply(money).sum() if total_entries else 0
 
-    st.markdown('<div class="card-box"><h2 class="card-title">Expense Summary</h2>', unsafe_allow_html=True)
-
+    st.divider()
+    st.subheader("Expense Summary")
     s1, s2, s3, s4, s5 = st.columns(5)
-
-    with s1:
-        summary_box("Total Entries", str(total_entries))
-    with s2:
-        summary_box("Toll / Parking", f"₹{sum_toll:.2f}")
-    with s3:
-        summary_box("Fuel", f"₹{sum_fuel:.2f}")
-    with s4:
-        summary_box("Lodging + Food", f"₹{sum_stay_food:.2f}")
-    with s5:
-        summary_box("Grand Total", f"₹{grand_total:.2f}")
-
-    st.markdown('<div class="block-gap"></div>', unsafe_allow_html=True)
+    s1.metric("Total Entries", str(total_entries))
+    s2.metric("Toll / Parking", f"₹{sum_toll:.2f}")
+    s3.metric("Fuel", f"₹{sum_fuel:.2f}")
+    s4.metric("Lodging + Food", f"₹{sum_stay_food:.2f}")
+    s5.metric("Grand Total", f"₹{grand_total:.2f}")
 
     b1, b2, b3 = st.columns([1.4, 1.1, 1.1])
-
     with b1:
         try:
             excel_bytes = generate_excel(df, employee)
             st.download_button(
-                "Download Same Excel Format",
+                "Download Excel Format",
                 data=excel_bytes,
                 file_name=f"Travelling_Expenses_{employee['empName'].replace(' ', '_').replace('.', '')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -714,60 +427,25 @@ def main():
         if st.button("Refresh", use_container_width=True):
             st.rerun()
 
-    st.markdown('<p class="muted">Excel download uses your original workbook. Only employee details and entry cells are filled.</p></div>', unsafe_allow_html=True)
+    st.caption("Excel download uses your original workbook. Only employee details and entry cells are filled.")
+    st.divider()
 
-    st.markdown('<div class="card-box"><h2 class="card-title">Saved Entries</h2>', unsafe_allow_html=True)
-
+    st.subheader("Saved Entries")
     if filtered.empty:
         st.info("No entries saved for this employee and period.")
     else:
-        display_cols = [
-            "date",
-            "from",
-            "to",
-            "company",
-            "contact",
-            "invoice",
-            "vehicle",
-            "toll",
-            "fuel",
-            "lodging",
-            "food",
-            "tel",
-            "courier",
-            "rikshaw",
-            "total",
-            "remarks",
-            "id",
-        ]
-
+        display_cols = ["date", "from", "to", "company", "contact", "invoice", "vehicle", "toll", "fuel", "lodging", "food", "tel", "courier", "rikshaw", "total", "remarks", "id"]
         show_df = filtered[[c for c in display_cols if c in filtered.columns]].copy()
         show_df = show_df.rename(columns={
-            "date": "Date",
-            "from": "From",
-            "to": "To",
-            "company": "Company / Consultant",
-            "contact": "Contact",
-            "invoice": "Invoice",
-            "vehicle": "Vehicle",
-            "toll": "Toll",
-            "fuel": "Fuel",
-            "lodging": "Lodging",
-            "food": "Food",
-            "tel": "Tel",
-            "courier": "Courier",
-            "rikshaw": "Rikshaw",
-            "total": "Total",
-            "remarks": "Remarks",
-            "id": "EntryID",
+            "date": "Date", "from": "From", "to": "To", "company": "Company / Consultant",
+            "contact": "Contact", "invoice": "Invoice", "vehicle": "Vehicle", "toll": "Toll",
+            "fuel": "Fuel", "lodging": "Lodging", "food": "Food", "tel": "Tel", "courier": "Courier",
+            "rikshaw": "Rikshaw", "total": "Total", "remarks": "Remarks", "id": "EntryID",
         })
-
         st.dataframe(show_df, use_container_width=True, hide_index=True, height=330)
 
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown('<div class="card-box"><h2 class="card-title">Edit / Delete Entry</h2>', unsafe_allow_html=True)
-
+    st.divider()
+    st.subheader("Edit / Delete Entry")
     if filtered.empty:
         st.info("No entry available to edit.")
     else:
@@ -778,15 +456,12 @@ def main():
 
         selected_label = st.selectbox("Select entry to edit", [x[0] for x in edit_options])
         selected_id = dict(edit_options).get(selected_label, "")
-
         selected_rows = filtered[filtered["id"].astype(str) == selected_id]
 
         if not selected_rows.empty:
             selected = selected_rows.iloc[0].to_dict()
-
             with st.form("edit_form"):
                 e1, e2, e3, e4 = st.columns(4)
-
                 edit_date = e1.date_input("Date", value=parse_entry_date(selected.get("date")), key="edit_date")
                 edit_from = e2.text_input("From", value=make_str(selected.get("from")), key="edit_from")
                 edit_to = e3.text_input("To", value=make_str(selected.get("to")), key="edit_to")
@@ -814,7 +489,6 @@ def main():
                 edit_remarks = st.text_area("Remarks / Purpose", value=make_str(selected.get("remarks")), key="edit_remarks")
 
                 u1, u2 = st.columns(2)
-
                 update_clicked = u1.form_submit_button("Update Selected Entry")
                 delete_clicked = u2.form_submit_button("Delete Selected Entry")
 
@@ -850,7 +524,6 @@ def main():
                             st.rerun()
                         else:
                             st.error("Entry not found.")
-
                     except Exception as e:
                         st.error(f"Update failed: {e}")
                         with st.expander("Show full error"):
@@ -865,9 +538,6 @@ def main():
                         st.error(f"Delete failed: {e}")
                         with st.expander("Show full error"):
                             st.code(traceback.format_exc())
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
 
 if __name__ == "__main__":
     main()
