@@ -787,31 +787,31 @@ def main():
             with st.form("edit_form"):
                 e1, e2, e3, e4 = st.columns(4)
 
-                edit_date = e1.date_input("Date", value=parse_entry_date(selected.get("date")), key="edit_date")
-                edit_from = e2.text_input("From", value=make_str(selected.get("from")), key="edit_from")
-                edit_to = e3.text_input("To", value=make_str(selected.get("to")), key="edit_to")
+                edit_date = e1.date_input("Date", value=parse_entry_date(selected.get("date")), key=f"edit_date_{selected_id}")
+                edit_from = e2.text_input("From", value=make_str(selected.get("from")), key=f"edit_from_{selected_id}")
+                edit_to = e3.text_input("To", value=make_str(selected.get("to")), key=f"edit_to_{selected_id}")
 
                 current_vehicle = make_str(selected.get("vehicle"))
                 vehicle_index = VEHICLE_OPTIONS.index(current_vehicle) if current_vehicle in VEHICLE_OPTIONS else 0
-                edit_vehicle = e4.selectbox("2 Wheeler / 4 Wheeler", VEHICLE_OPTIONS, index=vehicle_index, key="edit_vehicle")
+                edit_vehicle = e4.selectbox("2 Wheeler / 4 Wheeler", VEHICLE_OPTIONS, index=vehicle_index, key=f"edit_vehicle_{selected_id}")
 
                 e5, e6 = st.columns(2)
-                edit_company = e5.text_input("Company Name / Contact / MEP Consultant", value=make_str(selected.get("company")), key="edit_company")
-                edit_contact = e6.text_input("Contact Person / Meeting With", value=make_str(selected.get("contact")), key="edit_contact")
+                edit_company = e5.text_input("Company Name / Contact / MEP Consultant", value=make_str(selected.get("company")), key=f"edit_company_{selected_id}")
+                edit_contact = e6.text_input("Contact Person / Meeting With", value=make_str(selected.get("contact")), key=f"edit_contact_{selected_id}")
 
                 e7, e8, e9, e10 = st.columns(4)
-                edit_invoice = e7.text_input("Invoice No.", value=make_str(selected.get("invoice")), key="edit_invoice")
-                edit_toll = e8.number_input("Toll / Parking", min_value=0.0, value=money(selected.get("toll")), step=1.0, key="edit_toll")
-                edit_fuel = e9.number_input("Petrol / Diesel", min_value=0.0, value=money(selected.get("fuel")), step=1.0, key="edit_fuel")
-                edit_lodging = e10.number_input("Lodging / Boarding", min_value=0.0, value=money(selected.get("lodging")), step=1.0, key="edit_lodging")
+                edit_invoice = e7.text_input("Invoice No.", value=make_str(selected.get("invoice")), key=f"edit_invoice_{selected_id}")
+                edit_toll = e8.number_input("Toll / Parking", min_value=0.0, value=money(selected.get("toll")), step=1.0, key=f"edit_toll_{selected_id}")
+                edit_fuel = e9.number_input("Petrol / Diesel", min_value=0.0, value=money(selected.get("fuel")), step=1.0, key=f"edit_fuel_{selected_id}")
+                edit_lodging = e10.number_input("Lodging / Boarding", min_value=0.0, value=money(selected.get("lodging")), step=1.0, key=f"edit_lodging_{selected_id}")
 
                 e11, e12, e13, e14 = st.columns(4)
-                edit_food = e11.number_input("Food / Beverages", min_value=0.0, value=money(selected.get("food")), step=1.0, key="edit_food")
-                edit_tel = e12.number_input("Tel / Internet", min_value=0.0, value=money(selected.get("tel")), step=1.0, key="edit_tel")
-                edit_courier = e13.number_input("Courier / Stationary", min_value=0.0, value=money(selected.get("courier")), step=1.0, key="edit_courier")
-                edit_rikshaw = e14.number_input("Rikshaw / Bus / Ola", min_value=0.0, value=money(selected.get("rikshaw")), step=1.0, key="edit_rikshaw")
+                edit_food = e11.number_input("Food / Beverages", min_value=0.0, value=money(selected.get("food")), step=1.0, key=f"edit_food_{selected_id}")
+                edit_tel = e12.number_input("Tel / Internet", min_value=0.0, value=money(selected.get("tel")), step=1.0, key=f"edit_tel_{selected_id}")
+                edit_courier = e13.number_input("Courier / Stationary", min_value=0.0, value=money(selected.get("courier")), step=1.0, key=f"edit_courier_{selected_id}")
+                edit_rikshaw = e14.number_input("Rikshaw / Bus / Ola", min_value=0.0, value=money(selected.get("rikshaw")), step=1.0, key=f"edit_rikshaw_{selected_id}")
 
-                edit_remarks = st.text_area("Remarks / Purpose", value=make_str(selected.get("remarks")), key="edit_remarks")
+                edit_remarks = st.text_area("Remarks / Purpose", value=make_str(selected.get("remarks")), key=f"edit_remarks_{selected_id}")
 
                 u1, u2 = st.columns(2)
 
